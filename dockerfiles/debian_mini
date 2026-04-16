@@ -4,80 +4,20 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get clean && apt-get update && apt-get -y upgrade
 
 RUN apt-get -y install \
-    apt-utils \
     gcc \
     g++ \
     python3 \
     python3-pip \
     vim \
-    unzip \
-    ruby \
+    git \
+    curl \
+    wget \
     nodejs \
     npm \
-    perl \
-    lua5.4 \
-    luajit \
-    make \
-    fakeroot \
-    dbus \
-    whiptail \
-    hexedit \
-    patch \
-    wamerican \
-    ucf \
-    manpages \
-    file \
-    dialog \
-    curl \
-    less \
-    cowsay \
-    netcat-openbsd \
-    git \
-    golang \
-    php \
-    default-jdk \
-    maven \
-    gradle \
-    rustc \
-    cargo \
-    gfortran \
-    ghc \
-    cabal-install \
-    r-base \
-    ruby-bundler \
-    ruby-dev \
-    python3-venv \
-    python3-dev \
-    cmake \
-    ninja-build \
-    autoconf \
-    automake \
-    pkg-config \
-    wget \
-    openssh-client \
-    zip \
-    tar \
-    gzip \
-    bzip2 \
-    xz-utils
+    make
 
-# Install TypeScript and common Node packages globally
-RUN npm install -g \
-    typescript \
-    ts-node \
-    yarn \
-    nodemon \
-    express-generator
-
-# Install common Python packages
-RUN pip3 install --break-system-packages \
-    requests \
-    numpy \
-    flask \
-    pytest \
-    click \
-    blessed \
-    psutil
+# Install Python packages
+RUN pip3 install --break-system-packages blessed psutil
 
 # Create user
 RUN useradd -m user && echo "user:password" | chpasswd
@@ -85,30 +25,10 @@ RUN useradd -m user && echo "user:password" | chpasswd
 # Create apps directory
 RUN mkdir -p /home/user/apps
 
-# Copy examples
-COPY --chown=user:user ./examples /home/user/examples
-RUN chmod -R +x /home/user/examples/lua
-
-# Copy and setup install script
-COPY scripts/install.sh /usr/local/bin/install
-RUN chmod +x /usr/local/bin/install
-
-# Copy welcome message
-COPY scripts/welcome.sh /etc/profile.d/welcome.sh
-RUN chmod +x /etc/profile.d/welcome.sh
-
-# Pre install the UI
-RUN mkdir -p /home/user/apps/Dragon-Gaming-Platforms/myos-ui
-RUN git clone https://github.com/Dragon-Gaming-Platforms/myos-ui \
-    /home/user/apps/Dragon-Gaming-Platforms/myos-ui || true
-
 WORKDIR /home/user/
 ENV HOME="/home/user" TERM="xterm" USER="user" \
     SHELL="/bin/bash" EDITOR="vim" \
-    LANG="en_US.UTF-8" LC_ALL="C" \
-    PATH="/home/user/.cargo/bin:$PATH"
+    LANG="en_US.UTF-8" LC_ALL="C"
 
 RUN echo 'root:password' | chpasswd
-
-# Launch UI on startup
-CMD [ "python3", "/home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py" ]
+CMD [ "/bin/bash" ]
