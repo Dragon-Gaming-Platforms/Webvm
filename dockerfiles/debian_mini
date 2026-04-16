@@ -14,10 +14,59 @@ RUN apt-get -y install \
     wget \
     nodejs \
     npm \
-    make
+    rustc \
+    cargo \
+    golang \
+    make \
+    perl \
+    ruby \
+    lua5.4 \
+    php \
+    unzip \
+    zip \
+    tar \
+    gzip \
+    bzip2 \
+    xz-utils \
+    file \
+    less \
+    dialog \
+    whiptail \
+    cowsay \
+    netcat-openbsd \
+    fakeroot \
+    dbus \
+    hexedit \
+    patch \
+    wamerican \
+    ucf \
+    manpages \
+    luajit \
+    python3-venv \
+    python3-dev \
+    ruby-bundler \
+    ruby-dev \
+    cmake \
+    autoconf \
+    automake \
+    pkg-config \
+    openssh-client
 
-# Install Python packages
-RUN pip3 install --break-system-packages blessed psutil
+# Install TypeScript and common Node packages globally
+RUN npm install -g \
+    typescript \
+    ts-node \
+    yarn \
+    nodemon
+
+# Install essential Python packages
+RUN pip3 install --break-system-packages \
+    blessed \
+    psutil \
+    requests \
+    flask \
+    pytest \
+    click
 
 # Create user
 RUN useradd -m user && echo "user:password" | chpasswd
@@ -25,10 +74,40 @@ RUN useradd -m user && echo "user:password" | chpasswd
 # Create apps directory
 RUN mkdir -p /home/user/apps
 
+# Copy examples if they exist
+COPY --chown=user:user ./examples /home/user/examples 2>/dev/null || true
+RUN chmod -R +x /home/user/examples/lua 2>/dev/null || true
+
+# Copy and setup install script
+COPY scripts/install.sh /usr/local/bin/install
+RUN chmod +x /usr/local/bin/install
+
+# Copy welcome message
+COPY scripts/welcome.sh /etc/profile.d/welcome.sh
+RUN chmod +x /etc/profile.d/welcome.sh
+
+# Clone the OS UI
+RUN mkdir -p /home/user/apps/Dragon-Gaming-Platforms
+RUN git clone https://github.com/Dragon-Gaming-Platforms/myos-ui \
+    /home/user/apps/Dragon-Gaming-Platforms/myos-ui || echo "UI repo not found, skipping..."
+
+# Set ownership
+RUN chown -R user:user /home/user/apps
+
 WORKDIR /home/user/
 ENV HOME="/home/user" TERM="xterm" USER="user" \
     SHELL="/bin/bash" EDITOR="vim" \
-    LANG="en_US.UTF-8" LC_ALL="C"
+    LANG="en_US.UTF-8" LC_ALL="C" \
+    PATH="/home/user/.cargo/bin:$PATH"
 
 RUN echo 'root:password' | chpasswd
-CMD [ "/bin/bash" ]
+
+# Launch UI on startup (falls back to bash if UI not found)
+CMD if [ -f /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py ]; then \
+        python3 /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py; \
+    else \
+        echo "OS UI not found. Please create the myos-ui repository."; \
+        echo "Repository: https://github.com/Dragon-Gaming-Platforms/myos-ui"; \
+        echo "Falling back to bash..."; \
+        /bin/bash; \
+    fi
