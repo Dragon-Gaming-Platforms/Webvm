@@ -34,7 +34,64 @@ RUN apt-get -y install \
     netcat-openbsd \
     git \
     golang \
-    php
+    php \
+    # Java
+    default-jdk \
+    maven \
+    gradle \
+    # Rust
+    rustc \
+    cargo \
+    # Fortran
+    gfortran \
+    # Haskell
+    ghc \
+    cabal-install \
+    # R
+    r-base \
+    # Ruby extras
+    ruby-bundler \
+    ruby-dev \
+    # Python extras
+    python3-venv \
+    python3-dev \
+    # Build tools
+    cmake \
+    ninja-build \
+    autoconf \
+    automake \
+    pkg-config \
+    # Networking tools
+    wget \
+    openssh-client \
+    # Compression
+    zip \
+    tar \
+    gzip \
+    bzip2 \
+    xz-utils
+
+# Install TypeScript and common Node packages globally
+RUN npm install -g \
+    typescript \
+    ts-node \
+    yarn \
+    nodemon \
+    express-generator \
+    @angular/cli \
+    create-react-app \
+    vue-cli
+
+# Install common Python packages
+RUN pip3 install \
+    requests \
+    numpy \
+    flask \
+    django \
+    fastapi \
+    pytest \
+    click \
+    rich
 
 # Create user
 RUN useradd -m user && echo "user:password" | chpasswd
@@ -57,7 +114,8 @@ RUN chmod +x /etc/profile.d/welcome.sh
 WORKDIR /home/user/
 ENV HOME="/home/user" TERM="xterm" USER="user" \
     SHELL="/bin/bash" EDITOR="vim" \
-    LANG="en_US.UTF-8" LC_ALL="C"
+    LANG="en_US.UTF-8" LC_ALL="C" \
+    PATH="/home/user/.cargo/bin:$PATH"
 
 RUN echo 'root:password' | chpasswd
 CMD [ "/bin/bash" ]
