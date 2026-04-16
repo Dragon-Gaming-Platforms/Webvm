@@ -35,36 +35,26 @@ RUN apt-get -y install \
     git \
     golang \
     php \
-    # Java
     default-jdk \
     maven \
     gradle \
-    # Rust
     rustc \
     cargo \
-    # Fortran
     gfortran \
-    # Haskell
     ghc \
     cabal-install \
-    # R
     r-base \
-    # Ruby extras
     ruby-bundler \
     ruby-dev \
-    # Python extras
     python3-venv \
     python3-dev \
-    # Build tools
     cmake \
     ninja-build \
     autoconf \
     automake \
     pkg-config \
-    # Networking tools
     wget \
     openssh-client \
-    # Compression
     zip \
     tar \
     gzip \
@@ -77,21 +67,17 @@ RUN npm install -g \
     ts-node \
     yarn \
     nodemon \
-    express-generator \
-    @angular/cli \
-    create-react-app \
-    vue-cli
+    express-generator
 
 # Install common Python packages
-RUN pip3 install \
+RUN pip3 install --break-system-packages \
     requests \
     numpy \
     flask \
-    django \
-    fastapi \
     pytest \
     click \
-    rich
+    blessed \
+    psutil
 
 # Create user
 RUN useradd -m user && echo "user:password" | chpasswd
@@ -111,6 +97,11 @@ RUN chmod +x /usr/local/bin/install
 COPY scripts/welcome.sh /etc/profile.d/welcome.sh
 RUN chmod +x /etc/profile.d/welcome.sh
 
+# Pre install the UI
+RUN mkdir -p /home/user/apps/Dragon-Gaming-Platforms/myos-ui
+RUN git clone https://github.com/Dragon-Gaming-Platforms/myos-ui \
+    /home/user/apps/Dragon-Gaming-Platforms/myos-ui || true
+
 WORKDIR /home/user/
 ENV HOME="/home/user" TERM="xterm" USER="user" \
     SHELL="/bin/bash" EDITOR="vim" \
@@ -118,4 +109,6 @@ ENV HOME="/home/user" TERM="xterm" USER="user" \
     PATH="/home/user/.cargo/bin:$PATH"
 
 RUN echo 'root:password' | chpasswd
-CMD [ "/bin/bash" ]
+
+# Launch UI on startup
+CMD [ "python3", "/home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py" ]
