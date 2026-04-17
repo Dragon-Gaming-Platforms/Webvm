@@ -67,6 +67,11 @@
             50% { opacity: 0.3; }
         }
 
+        .toolbar-right {
+            display: flex;
+            gap: 8px;
+        }
+
         .toolbar-btn {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -103,6 +108,12 @@
         .loading-logo {
             font-size: 48px;
             filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.8));
+            animation: dragonFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes dragonFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
 
         .loading-title {
@@ -193,6 +204,7 @@
             align-items: center;
             justify-content: center;
             gap: 15px;
+            padding: 20px;
         }
 
         #error-screen.visible {
@@ -211,12 +223,13 @@
         }
 
         .error-msg {
-            color: #666;
+            color: #888;
             font-size: 12px;
             font-family: monospace;
             text-align: center;
-            max-width: 400px;
+            max-width: 500px;
             line-height: 1.6;
+            white-space: pre-wrap;
         }
 
         .error-retry {
@@ -237,10 +250,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="/xterm/xterm.css">
-    <script src="/xterm/xterm.js"></script>
-    <script src="/xterm/xterm-addon-fit.js"></script>
-    <script src="https://cxrtnc.leaningtech.com/1.0.6/cx.js"></script>
+    <link rel="stylesheet" href="../../../xterm/xterm.css">
 </head>
 <body>
 
@@ -251,7 +261,7 @@
                 Initializing...
             </div>
         </div>
-        <div class="terminal-toolbar-right">
+        <div class="toolbar-right">
             <button class="toolbar-btn" onclick="clearTerminal()">Clear</button>
             <button class="toolbar-btn" onclick="restartTerminal()">Restart</button>
         </div>
@@ -282,6 +292,10 @@
     </div>
 
     <div id="terminal-container"></div>
+
+    <script src="../../../xterm/xterm.js"></script>
+    <script src="../../../xterm/xterm-addon-fit.js"></script>
+    <script src="https://cxrtnc.leaningtech.com/1.0.6/cx.js"></script>
 
     <script>
         let term = null;
@@ -384,8 +398,8 @@
                 advanceLoadingStep();
                 setStatus('Loading filesystem...', 'loading');
 
-                // Find the latest ext2 image
                 const imageUrl = await findLatestImage();
+                console.log('Using image:', imageUrl);
 
                 cx = await CheerpX.Linux.create({
                     mounts: [
@@ -425,30 +439,40 @@
 
             } catch (err) {
                 console.error("WebVM Error:", err);
-                showError("Failed to start terminal:\n" + err.message);
+                showError(
+                    "Failed to start terminal:\n\n" + 
+                    err.message + "\n\n" +
+                    "Make sure:\n" +
+                    "1. GitHub Actions workflow has completed\n" +
+                    "2. debian_mini.ext2 file exists\n" +
+                    "3. You're accessing from correct URL"
+                );
             }
         }
 
         async function findLatestImage() {
-            // Try to find the ext2 image
             const possibleNames = [
-                '/debian_mini_LATEST.ext2',
-                // Add the actual filename after first deploy
+                '../../../debian_mini.ext2',
+                '../../../debian_mini_LATEST.ext2',
             ];
 
             for (const name of possibleNames) {
                 try {
                     const response = await fetch(name, { method: 'HEAD' });
-                    if (response.ok) return name;
+                    if (response.ok) {
+                        console.log('Found image:', name);
+                        return name;
+                    }
                 } catch (e) {
+                    console.log('Image not found:', name);
                     continue;
                 }
             }
 
-            // If none found, throw error with helpful message
             throw new Error(
-                "Could not find WebVM image. " +
-                "Make sure the WebVM workflow has run successfully."
+                "Could not find WebVM ext2 image.\n" +
+                "Expected file: debian_mini.ext2\n" +
+                "Make sure the GitHub Actions workflow completed successfully."
             );
         }
 
