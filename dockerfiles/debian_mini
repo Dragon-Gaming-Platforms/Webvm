@@ -74,25 +74,21 @@ RUN useradd -m user && echo "user:password" | chpasswd
 # Create apps directory
 RUN mkdir -p /home/user/apps
 
-# Copy examples if they exist
-COPY --chown=user:user ./examples /home/user/examples 2>/dev/null || true
-RUN chmod -R +x /home/user/examples/lua 2>/dev/null || true
-
-# Copy and setup install script
+# Copy scripts
 COPY scripts/install.sh /usr/local/bin/install
 RUN chmod +x /usr/local/bin/install
 
-# Copy welcome message
 COPY scripts/welcome.sh /etc/profile.d/welcome.sh
 RUN chmod +x /etc/profile.d/welcome.sh
 
 # Clone the OS UI
-RUN mkdir -p /home/user/apps/Dragon-Gaming-Platforms
-RUN git clone https://github.com/Dragon-Gaming-Platforms/myos-ui \
-    /home/user/apps/Dragon-Gaming-Platforms/myos-ui || echo "UI repo not found, skipping..."
+RUN mkdir -p /home/user/apps/Dragon-Gaming-Platforms && \
+    git clone https://github.com/Dragon-Gaming-Platforms/myos-ui \
+    /home/user/apps/Dragon-Gaming-Platforms/myos-ui || \
+    echo "UI repo not found yet, will fall back to bash"
 
 # Set ownership
-RUN chown -R user:user /home/user/apps
+RUN chown -R user:user /home/user
 
 WORKDIR /home/user/
 ENV HOME="/home/user" TERM="xterm" USER="user" \
@@ -103,11 +99,4 @@ ENV HOME="/home/user" TERM="xterm" USER="user" \
 RUN echo 'root:password' | chpasswd
 
 # Launch UI on startup (falls back to bash if UI not found)
-CMD if [ -f /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py ]; then \
-        python3 /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py; \
-    else \
-        echo "OS UI not found. Please create the myos-ui repository."; \
-        echo "Repository: https://github.com/Dragon-Gaming-Platforms/myos-ui"; \
-        echo "Falling back to bash..."; \
-        /bin/bash; \
-    fi
+CMD ["/bin/bash", "-c", "if [ -f /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py ]; then python3 /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py; else echo 'OS UI not found. Falling back to bash...'; /bin/bash; fi"]
