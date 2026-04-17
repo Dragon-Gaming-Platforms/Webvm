@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy WebVM + DragonOS
 
 # Define when the workflow should run
 on:
@@ -17,7 +17,7 @@ on:
         type: string
         description: 'Image size, 950M max'
         required: true
-        default: '750M'
+        default: '3000M'
 
       DEPLOY_TO_GITHUB_PAGES:
         type: boolean
@@ -189,11 +189,18 @@ jobs:
           npm install
           WEBVM_MODE=github npm run build
 
+      # Copy DragonOS files to deployment directory
+      - name: Copy DragonOS files
+        run: |
+          sudo cp -r os ${{ env.DEPLOY_DIR }}/
+          sudo cp -r xterm ${{ env.DEPLOY_DIR }}/
+          sudo cp _headers ${{ env.DEPLOY_DIR }}/ 2>/dev/null || true
+
       # Move required files for gh-pages deployment to the deployment directory $DEPLOY_DIR.
       - name: Copy build
         run: |
-          rm build/alpine.html
-          sudo mv build/* $DEPLOY_DIR/
+          rm build/alpine.html 2>/dev/null || true
+          sudo mv build/* ${{ env.DEPLOY_DIR }}/
 
       # We generate index.list files for our httpfs to function properly.
       - name: make index.list
