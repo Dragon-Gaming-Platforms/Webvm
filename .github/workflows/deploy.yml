@@ -189,18 +189,24 @@ jobs:
           npm install
           WEBVM_MODE=github npm run build
 
-      # Copy DragonOS files to deployment directory
-      - name: Copy DragonOS files
-        run: |
-          sudo cp -r os ${{ env.DEPLOY_DIR }}/
-          sudo cp -r xterm ${{ env.DEPLOY_DIR }}/
-          sudo cp _headers ${{ env.DEPLOY_DIR }}/ 2>/dev/null || true
-
       # Move required files for gh-pages deployment to the deployment directory $DEPLOY_DIR.
       - name: Copy build
         run: |
           rm build/alpine.html 2>/dev/null || true
           sudo mv build/* ${{ env.DEPLOY_DIR }}/
+
+      # Copy DragonOS files to deployment directory (AFTER npm build so they take priority)
+      - name: Copy DragonOS files
+        run: |
+          sudo cp -r os ${{ env.DEPLOY_DIR }}/
+          sudo cp -r xterm ${{ env.DEPLOY_DIR }}/
+          sudo cp _headers ${{ env.DEPLOY_DIR }}/ 2>/dev/null || true
+          # Make DragonOS the main landing page
+          sudo cp ${{ env.DEPLOY_DIR }}/os/index.html ${{ env.DEPLOY_DIR }}/index.html
+          sudo cp -r ${{ env.DEPLOY_DIR }}/os/css ${{ env.DEPLOY_DIR }}/
+          sudo cp -r ${{ env.DEPLOY_DIR }}/os/js ${{ env.DEPLOY_DIR }}/
+          sudo cp -r ${{ env.DEPLOY_DIR }}/os/apps ${{ env.DEPLOY_DIR }}/
+          sudo cp -r ${{ env.DEPLOY_DIR }}/os/assets ${{ env.DEPLOY_DIR }}/ 2>/dev/null || true
 
       # We generate index.list files for our httpfs to function properly.
       - name: make index.list
