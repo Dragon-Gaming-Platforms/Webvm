@@ -81,11 +81,21 @@ RUN chmod +x /usr/local/bin/install
 COPY scripts/welcome.sh /etc/profile.d/welcome.sh
 RUN chmod +x /etc/profile.d/welcome.sh
 
+# Create startup script
+RUN echo '#!/bin/bash' > /usr/local/bin/start-ui && \
+    echo 'if [ -f /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py ]; then' >> /usr/local/bin/start-ui && \
+    echo '  python3 /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py' >> /usr/local/bin/start-ui && \
+    echo 'else' >> /usr/local/bin/start-ui && \
+    echo '  echo "OS UI not found. Falling back to bash..."' >> /usr/local/bin/start-ui && \
+    echo '  /bin/bash' >> /usr/local/bin/start-ui && \
+    echo 'fi' >> /usr/local/bin/start-ui && \
+    chmod +x /usr/local/bin/start-ui
+
 # Clone the OS UI
 RUN mkdir -p /home/user/apps/Dragon-Gaming-Platforms && \
     git clone https://github.com/Dragon-Gaming-Platforms/myos-ui \
     /home/user/apps/Dragon-Gaming-Platforms/myos-ui || \
-    echo "UI repo not found yet, will fall back to bash"
+    echo "UI repo not found yet"
 
 # Set ownership
 RUN chown -R user:user /home/user
@@ -98,5 +108,5 @@ ENV HOME="/home/user" TERM="xterm" USER="user" \
 
 RUN echo 'root:password' | chpasswd
 
-# Launch UI on startup (falls back to bash if UI not found)
-CMD ["/bin/bash", "-c", "if [ -f /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py ]; then python3 /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py; else echo 'OS UI not found. Falling back to bash...'; /bin/bash; fi"]
+# Use the startup script
+CMD ["/usr/local/bin/start-ui"]
