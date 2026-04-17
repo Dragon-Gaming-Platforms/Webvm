@@ -52,53 +52,28 @@ RUN apt-get -y install \
     pkg-config \
     openssh-client
 
-# Install TypeScript and common Node packages globally
+# Install Node packages
 RUN npm install -g \
     typescript \
     ts-node \
     yarn \
     nodemon
 
-# Install essential Python packages
+# Install Python packages
 RUN pip3 install --break-system-packages \
-    blessed \
-    psutil \
     requests \
     flask \
     pytest \
-    click
+    click \
+    psutil
 
 # Create user
 RUN useradd -m user && echo "user:password" | chpasswd
-
-# Create apps directory
 RUN mkdir -p /home/user/apps
 
-# Copy scripts
+# Copy install script
 COPY scripts/install.sh /usr/local/bin/install
 RUN chmod +x /usr/local/bin/install
-
-COPY scripts/welcome.sh /etc/profile.d/welcome.sh
-RUN chmod +x /etc/profile.d/welcome.sh
-
-# Create startup script
-RUN echo '#!/bin/bash' > /usr/local/bin/start-ui && \
-    echo 'if [ -f /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py ]; then' >> /usr/local/bin/start-ui && \
-    echo '  python3 /home/user/apps/Dragon-Gaming-Platforms/myos-ui/main.py' >> /usr/local/bin/start-ui && \
-    echo 'else' >> /usr/local/bin/start-ui && \
-    echo '  echo "OS UI not found. Falling back to bash..."' >> /usr/local/bin/start-ui && \
-    echo '  /bin/bash' >> /usr/local/bin/start-ui && \
-    echo 'fi' >> /usr/local/bin/start-ui && \
-    chmod +x /usr/local/bin/start-ui
-
-# Clone the OS UI
-RUN mkdir -p /home/user/apps/Dragon-Gaming-Platforms && \
-    git clone https://github.com/Dragon-Gaming-Platforms/myos-ui \
-    /home/user/apps/Dragon-Gaming-Platforms/myos-ui || \
-    echo "UI repo not found yet"
-
-# Set ownership
-RUN chown -R user:user /home/user
 
 WORKDIR /home/user/
 ENV HOME="/home/user" TERM="xterm" USER="user" \
@@ -108,5 +83,5 @@ ENV HOME="/home/user" TERM="xterm" USER="user" \
 
 RUN echo 'root:password' | chpasswd
 
-# Use the startup script
-CMD ["/usr/local/bin/start-ui"]
+# Just launch bash - your web OS handles the UI
+CMD ["/bin/bash"]
