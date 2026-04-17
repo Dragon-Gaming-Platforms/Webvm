@@ -1,665 +1,484 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal</title>
     <style>
-        body { background: #0c0c0c; color: #cccccc; font-family: 'Consolas', monospace; margin: 0; padding: 10px; height: 100vh; overflow-y: auto; box-sizing: border-box;}
-        #output { white-space: pre-wrap; word-wrap: break-word; }
-        .input-line { display: flex; }
-        .prompt { margin-right: 8px; color: #00ff00;}
-        input { flex: 1; background: transparent; border: none; color: white; font-family: 'Consolas', monospace; outline: none; font-size: 14px;}
-        .error { color: #ff6b6b; }
-        .success { color: #51cf66; }
-        .info { color: #339af0; }
-        .warning { color: #ffd43b; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0d0d0d;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Cascadia Code', 'Courier New', monospace;
+        }
+
+        .terminal-toolbar {
+            background: #1a1a1a;
+            border-bottom: 1px solid rgba(255, 0, 0, 0.2);
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .terminal-toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .terminal-badge {
+            background: linear-gradient(90deg, #8a0000, #ff1a1a);
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .terminal-status {
+            font-size: 11px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        .terminal-status.ready {
+            color: #00ff88;
+        }
+
+        .terminal-status.loading {
+            color: #ffaa00;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .toolbar-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #aaa;
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: monospace;
+        }
+
+        .toolbar-btn:hover {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: rgba(255, 0, 0, 0.4);
+            color: white;
+        }
+
+        #loading-screen {
+            position: absolute;
+            top: 36px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0d0d0d;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            gap: 20px;
+        }
+
+        .loading-logo {
+            font-size: 48px;
+            filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.8));
+        }
+
+        .loading-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ff2e2e;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+            font-family: monospace;
+        }
+
+        .loading-subtitle {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+
+        .loading-bar-container {
+            width: 300px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .loading-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #8a0000, #ff1a1a);
+            border-radius: 3px;
+            animation: loadProgress 3s ease forwards;
+        }
+
+        @keyframes loadProgress {
+            0% { width: 0%; }
+            30% { width: 40%; }
+            60% { width: 70%; }
+            90% { width: 90%; }
+            100% { width: 95%; }
+        }
+
+        .loading-log {
+            font-family: monospace;
+            font-size: 11px;
+            color: #444;
+            text-align: center;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .loading-log span.active {
+            color: #00ff88;
+        }
+
+        #terminal-container {
+            flex: 1;
+            overflow: hidden;
+            display: none;
+            padding: 4px;
+            background: #0d0d0d;
+        }
+
+        #terminal-container.visible {
+            display: block;
+        }
+
+        .xterm {
+            height: 100%;
+            padding: 8px;
+        }
+
+        .xterm-viewport {
+            background: #0d0d0d !important;
+        }
+
+        #error-screen {
+            position: absolute;
+            top: 36px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0d0d0d;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        #error-screen.visible {
+            display: flex;
+        }
+
+        .error-icon {
+            font-size: 40px;
+        }
+
+        .error-title {
+            color: #ff2e2e;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .error-msg {
+            color: #666;
+            font-size: 12px;
+            font-family: monospace;
+            text-align: center;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        .error-retry {
+            background: linear-gradient(90deg, #8a0000, #ff1a1a);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 12px;
+            letter-spacing: 1px;
+            transition: 0.2s;
+        }
+
+        .error-retry:hover {
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+        }
     </style>
+
+    <link rel="stylesheet" href="/xterm/xterm.css">
+    <script src="/xterm/xterm.js"></script>
+    <script src="/xterm/xterm-addon-fit.js"></script>
+    <script src="https://cxrtnc.leaningtech.com/1.0.6/cx.js"></script>
 </head>
 <body>
-    <div id="output">Web OS Terminal [Version 2.0.0]<br>(c) Dragon Gaming Platforms. All rights reserved.<br><br>Type 'help' for available commands.<br><br></div>
-    <div class="input-line">
-        <span class="prompt" id="prompt-path">C:\Users\Admin></span>
-        <input type="text" id="cmd" autocomplete="off" autofocus>
+
+    <div class="terminal-toolbar">
+        <div class="terminal-toolbar-left">
+            <div class="terminal-badge">DragonOS Terminal</div>
+            <div class="terminal-status loading" id="status-text">
+                Initializing...
+            </div>
+        </div>
+        <div class="terminal-toolbar-right">
+            <button class="toolbar-btn" onclick="clearTerminal()">Clear</button>
+            <button class="toolbar-btn" onclick="restartTerminal()">Restart</button>
+        </div>
     </div>
 
+    <div id="loading-screen">
+        <div class="loading-logo">🐉</div>
+        <div class="loading-title">DragonOS Terminal</div>
+        <div class="loading-subtitle">Powered by WebVM + CheerpX</div>
+        <div class="loading-bar-container">
+            <div class="loading-bar"></div>
+        </div>
+        <div class="loading-log" id="loading-log">
+            <span id="log1">Initializing CheerpX engine...</span>
+            <span id="log2">Loading filesystem...</span>
+            <span id="log3">Starting Linux kernel...</span>
+            <span id="log4">Launching bash...</span>
+        </div>
+    </div>
+
+    <div id="error-screen">
+        <div class="error-icon">⚠️</div>
+        <div class="error-title">Terminal Failed To Start</div>
+        <div class="error-msg" id="error-msg">
+            Could not initialize WebVM.
+        </div>
+        <button class="error-retry" onclick="restartTerminal()">Retry</button>
+    </div>
+
+    <div id="terminal-container"></div>
+
     <script>
-        const VFS = window.parent.VFS;
-        const OS = window.parent;
-        const out = document.getElementById('output');
-        const cmd = document.getElementById('cmd');
-        
-        let currentPath = ''; 
-        let sessionToken = ''; // GitHub PAT for sudo commands
-        let commandHistory = [];
-        let historyIndex = -1;
+        let term = null;
+        let fitAddon = null;
+        let cx = null;
+        let isReady = false;
 
-        // ========== SAFE BASE64 ENCODING ==========
-        function safeBase64Encode(str) {
-            return btoa(unescape(encodeURIComponent(str)));
-        }
+        const logSteps = ['log1', 'log2', 'log3', 'log4'];
+        let currentStep = 0;
 
-        function safeBase64Decode(str) {
-            return decodeURIComponent(escape(atob(str)));
-        }
-
-        // ========== INPUT HANDLING ==========
-        cmd.addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter') {
-                const val = cmd.value.trim();
-                if (val) {
-                    commandHistory.push(val);
-                    historyIndex = commandHistory.length;
-                }
-                cmd.value = '';
-                print(`<span style="color:#00ff00">C:\\Users\\Admin${currentPath ? '\\' + currentPath.replace(/\//g,'\\') : ''}></span> ${escapeHTML(val)}`);
-                await runCommand(val);
-                updatePrompt();
-                window.scrollTo(0, document.body.scrollHeight);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (historyIndex > 0) {
-                    historyIndex--;
-                    cmd.value = commandHistory[historyIndex];
-                }
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (historyIndex < commandHistory.length - 1) {
-                    historyIndex++;
-                    cmd.value = commandHistory[historyIndex];
-                } else {
-                    historyIndex = commandHistory.length;
-                    cmd.value = '';
-                }
-            } else if (e.key === 'Tab') {
-                e.preventDefault();
-                await autocomplete();
+        function advanceLoadingStep() {
+            if (currentStep > 0) {
+                const prev = document.getElementById(logSteps[currentStep - 1]);
+                if (prev) prev.style.color = '#00ff88';
             }
-        });
-
-        // Always keep focus on input
-        document.body.addEventListener('click', () => cmd.focus());
-
-        // ========== HELPERS ==========
-        function print(text, className = '') { 
-            out.innerHTML += `<span class="${className}">${text}</span><br>`; 
-        }
-        
-        function escapeHTML(str) {
-            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
-
-        function updatePrompt() {
-            document.getElementById('prompt-path').innerText = `C:\\Users\\Admin${currentPath ? '\\' + currentPath.replace(/\//g,'\\') : ''}>`;
-        }
-
-        async function autocomplete() {
-            const val = cmd.value.trim();
-            const args = val.split(' ');
-            const lastArg = args[args.length - 1];
-            
-            const files = await VFS.getFiles();
-            const matches = files
-                .filter(f => {
-                    if (currentPath === '' && !f.name.includes('/')) return f.name.startsWith(lastArg);
-                    if (currentPath !== '' && f.name.startsWith(currentPath + '/')) {
-                        const relativeName = f.name.substring(currentPath.length + 1);
-                        return !relativeName.includes('/') && relativeName.startsWith(lastArg);
-                    }
-                    return false;
-                })
-                .map(f => currentPath === '' ? f.name : f.name.split('/').pop());
-
-            if (matches.length === 1) {
-                args[args.length - 1] = matches[0];
-                cmd.value = args.join(' ');
-            } else if (matches.length > 1) {
-                print('');
-                matches.forEach(m => print('  ' + m));
+            if (currentStep < logSteps.length) {
+                const curr = document.getElementById(logSteps[currentStep]);
+                if (curr) curr.classList.add('active');
+                currentStep++;
             }
         }
 
-        // ========== COMMAND ROUTER ==========
-        async function runCommand(command) {
-            if (!command) return;
-            
-            const args = command.split(' ');
-            const cmdName = args[0].toLowerCase();
-            
-            // ===== HELP MENU =====
-            if (cmdName === 'help') {
-                print('<span class="info">===== BASIC COMMANDS =====</span>');
-                print('  ls              - List files in current directory');
-                print('  cd [dir]        - Change directory (use ".." to go up)');
-                print('  pwd             - Print working directory');
-                print('  mkdir [name]    - Create a new folder');
-                print('  rm [file]       - Delete a file or folder');
-                print('  cat [file]      - Read a text file');
-                print('  echo [text]     - Print text or create file (echo hi > file.txt)');
-                print('  cp [src] [dst]  - Copy a file');
-                print('  mv [src] [dst]  - Move/rename a file');
-                print('  find [query]    - Search for files by name');
-                print('  tree            - Display directory tree');
-                print('');
-                print('<span class="info">===== SYSTEM COMMANDS =====</span>');
-                print('  whoami          - Show current user');
-                print('  date            - Show system date/time');
-                print('  clear / cls     - Clear terminal');
-                print('  history         - Show command history');
-                print('  sysinfo         - Display OS information');
-                print('  ps              - List running processes');
-                print('  kill [pid]      - Close a window by ID');
-                print('  theme [color]   - Change OS accent color');
-                print('  notify [msg]    - Send an OS notification');
-                print('');
-                print('<span class="info">===== VFS TOOLS =====</span>');
-                print('  import [url]    - Download file from URL to VFS');
-                print('  export [file]   - Download VFS file to computer');
-                print('  size [file]     - Show file size');
-                print('  wc [file]       - Count lines/words/chars in file');
-                print('  head [file]     - Show first 10 lines');
-                print('  tail [file]     - Show last 10 lines');
-                print('  compile [file]  - Convert .html to .exe');
-                print('');
-                
-                if (isAdmin()) {
-                    print('<span class="warning">===== ADMIN COMMANDS =====</span>');
-                    print('  sudo pull [repo_path]              - Download file from GitHub');
-                    print('  sudo push [local_file] [repo_path] - Upload file to GitHub');
-                    print('  sudo token                         - Set GitHub PAT for session');
-                    print('  sudo nuke                          - Clear all VFS files');
-                    print('  sudo inject [code]                 - Execute JavaScript in OS context');
-                }
-            }
-
-            // ===== NAVIGATION =====
-            else if (cmdName === 'ls') {
-                const files = await VFS.getFiles();
-                let count = 0;
-                files.forEach(f => {
-                    if (currentPath === '' && !f.name.includes('/')) { 
-                        print(`  ${f.type === 'folder'?'<span class="info">[DIR]</span> ':'[FILE]'} ${f.name}`); 
-                        count++; 
-                    } else if (currentPath !== '' && f.name.startsWith(currentPath + '/') && f.name.substring(currentPath.length + 1).indexOf('/') === -1) {
-                        print(`  ${f.type === 'folder'?'<span class="info">[DIR]</span> ':'[FILE]'} ${f.name.split('/').pop()}`); 
-                        count++;
-                    }
-                });
-                if (count === 0) print('  <span class="warning">(Empty Directory)</span>');
-            }
-            
-            else if (cmdName === 'cd') {
-                if (!args[1]) {
-                    currentPath = '';
-                } else if (args[1] === '..') {
-                    if (currentPath !== '') currentPath = currentPath.split('/').slice(0, -1).join('/');
-                } else {
-                    const target = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                    const files = await VFS.getFiles();
-                    if (files.find(f => f.name === target && f.type === 'folder')) {
-                        currentPath = target;
-                    } else {
-                        print(`<span class="error">Directory not found: ${args[1]}</span>`);
-                    }
-                }
-            }
-            
-            else if (cmdName === 'pwd') {
-                print(`  C:\\Users\\Admin${currentPath ? '\\' + currentPath.replace(/\//g,'\\') : ''}`);
-            }
-
-            else if (cmdName === 'tree') {
-                const files = await VFS.getFiles();
-                const tree = buildTree(files);
-                print('  .');
-                renderTree(tree, '  ');
-            }
-
-            // ===== FILE OPERATIONS =====
-            else if (cmdName === 'mkdir' && args[1]) {
-                const path = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                await VFS.saveFile(path, 'folder', '');
-                print(`<span class="success">Directory created: ${args[1]}</span>`);
-            }
-            
-            else if (cmdName === 'rm' && args[1]) {
-                const path = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                await VFS.deleteFile(path);
-                print(`<span class="success">Deleted: ${args[1]}</span>`);
-            }
-            
-            else if (cmdName === 'cat' && args[1]) {
-                const path = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                const files = await VFS.getFiles();
-                const file = files.find(f => f.name === path && f.type !== 'folder');
-                if (file) print(escapeHTML(file.content));
-                else print(`<span class="error">File not found or is a directory.</span>`);
-            }
-            
-            else if (cmdName === 'echo') {
-                const fullCmd = command.substring(5);
-                const parts = fullCmd.split('>');
-                if (parts.length > 1) {
-                    const text = parts[0].trim().replace(/^"|"$/g, '');
-                    const filename = parts[1].trim();
-                    const path = currentPath === '' ? filename : `${currentPath}/${filename}`;
-                    await VFS.saveFile(path, 'text/plain', text);
-                    print(`<span class="success">Saved to ${filename}</span>`);
-                } else {
-                    print(escapeHTML(fullCmd));
-                }
-            }
-
-            else if (cmdName === 'cp' && args[1] && args[2]) {
-                const srcPath = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                const dstPath = currentPath === '' ? args[2] : `${currentPath}/${args[2]}`;
-                const files = await VFS.getFiles();
-                const src = files.find(f => f.name === srcPath);
-                if (src) {
-                    await VFS.saveFile(dstPath, src.type, src.content);
-                    print(`<span class="success">Copied ${args[1]} to ${args[2]}</span>`);
-                } else {
-                    print(`<span class="error">Source file not found.</span>`);
-                }
-            }
-
-            else if (cmdName === 'mv' && args[1] && args[2]) {
-                const srcPath = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                const dstPath = currentPath === '' ? args[2] : `${currentPath}/${args[2]}`;
-                const files = await VFS.getFiles();
-                const src = files.find(f => f.name === srcPath);
-                if (src) {
-                    await VFS.saveFile(dstPath, src.type, src.content);
-                    await VFS.deleteFile(srcPath);
-                    print(`<span class="success">Moved ${args[1]} to ${args[2]}</span>`);
-                } else {
-                    print(`<span class="error">Source file not found.</span>`);
-                }
-            }
-
-            else if (cmdName === 'find' && args[1]) {
-                const query = args[1].toLowerCase();
-                const files = await VFS.getFiles();
-                const matches = files.filter(f => f.name.toLowerCase().includes(query));
-                if (matches.length > 0) {
-                    matches.forEach(f => print(`  ${f.name}`));
-                } else {
-                    print(`<span class="warning">No files found matching "${args[1]}"</span>`);
-                }
-            }
-
-            else if (cmdName === 'size' && args[1]) {
-                const path = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                const files = await VFS.getFiles();
-                const file = files.find(f => f.name === path);
-                if (file) {
-                    const bytes = new Blob([file.content]).size;
-                    print(`  ${bytes} bytes (${(bytes / 1024).toFixed(2)} KB)`);
-                } else {
-                    print(`<span class="error">File not found.</span>`);
-                }
-            }
-
-            else if (cmdName === 'wc' && args[1]) {
-                const path = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                const files = await VFS.getFiles();
-                const file = files.find(f => f.name === path);
-                if (file && file.type !== 'folder') {
-                    const lines = file.content.split('\n').length;
-                    const words = file.content.split(/\s+/).filter(w => w).length;
-                    const chars = file.content.length;
-                    print(`  Lines: ${lines}  Words: ${words}  Chars: ${chars}`);
-                } else {
-                    print(`<span class="error">File not found.</span>`);
-                }
-            }
-
-            else if (cmdName === 'head' && args[1]) {
-                const path = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                const files = await VFS.getFiles();
-                const file = files.find(f => f.name === path);
-                if (file && file.type !== 'folder') {
-                    const lines = file.content.split('\n').slice(0, 10);
-                    print(escapeHTML(lines.join('\n')));
-                } else {
-                    print(`<span class="error">File not found.</span>`);
-                }
-            }
-
-            else if (cmdName === 'tail' && args[1]) {
-                const path = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                const files = await VFS.getFiles();
-                const file = files.find(f => f.name === path);
-                if (file && file.type !== 'folder') {
-                    const lines = file.content.split('\n').slice(-10);
-                    print(escapeHTML(lines.join('\n')));
-                } else {
-                    print(`<span class="error">File not found.</span>`);
-                }
-            }
-
-            else if (cmdName === 'compile' && args[1]) {
-                const srcPath = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                const files = await VFS.getFiles();
-                const file = files.find(f => f.name === srcPath);
-                if (file && file.name.endsWith('.html')) {
-                    const exePath = srcPath.replace('.html', '.exe');
-                    await VFS.saveFile(exePath, 'application/x-executable', file.content);
-                    print(`<span class="success">Compiled ${args[1]} → ${exePath.split('/').pop()}</span>`);
-                    OS.showNotification('App Compiled', `${exePath.split('/').pop()} is now executable!`);
-                } else {
-                    print(`<span class="error">File must be .html</span>`);
-                }
-            }
-
-            else if (cmdName === 'import' && args[1]) {
-                print(`<span class="info">Downloading ${args[1]}...</span>`);
-                try {
-                    const res = await fetch(args[1]);
-                    if (!res.ok) throw new Error('Failed to fetch');
-                    const content = await res.text();
-                    const filename = args[1].split('/').pop() || 'download.txt';
-                    const path = currentPath === '' ? filename : `${currentPath}/${filename}`;
-                    await VFS.saveFile(path, 'text/plain', content);
-                    print(`<span class="success">Imported ${filename}</span>`);
-                } catch (err) {
-                    print(`<span class="error">Download failed: ${err.message}</span>`);
-                }
-            }
-
-            else if (cmdName === 'export' && args[1]) {
-                const path = currentPath === '' ? args[1] : `${currentPath}/${args[1]}`;
-                const files = await VFS.getFiles();
-                const file = files.find(f => f.name === path);
-                if (file) {
-                    const blob = new Blob([file.content], { type: file.type });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = file.name.split('/').pop();
-                    a.click();
-                    print(`<span class="success">Exported ${args[1]}</span>`);
-                } else {
-                    print(`<span class="error">File not found.</span>`);
-                }
-            }
-
-            // ===== SYSTEM COMMANDS =====
-            else if (cmdName === 'whoami') { 
-                print(`  ${OS.currentUser || 'Guest'}`); 
-            }
-            
-            else if (cmdName === 'date') { 
-                print(`  ${new Date().toString()}`); 
-            }
-            
-            else if (cmdName === 'clear' || cmdName === 'cls') { 
-                out.innerHTML = ''; 
-            }
-
-            else if (cmdName === 'history') {
-                commandHistory.forEach((h, i) => print(`  ${i + 1}  ${h}`));
-            }
-
-            else if (cmdName === 'sysinfo') {
-                print(`  OS: Dragon Web Operating System`);
-                print(`  User: ${OS.currentUser || 'Guest'}`);
-                print(`  Browser: ${navigator.userAgent.split(' ').pop()}`);
-                print(`  Screen: ${screen.width}x${screen.height}`);
-                print(`  Theme: ${getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#0078D4'}`);
-                const files = await VFS.getFiles();
-                print(`  VFS Files: ${files.length}`);
-            }
-
-            else if (cmdName === 'ps') {
-                if (OS.openWindows && OS.openWindows.length > 0) {
-                    print('  PID  NAME');
-                    OS.openWindows.forEach((w, i) => {
-                        const app = OS.appRegistry.find(a => a.id === w.appId);
-                        const name = app ? app.name : 'Unknown';
-                        print(`  ${i}    ${name}`);
-                    });
-                } else {
-                    print(`  <span class="warning">No running processes.</span>`);
-                }
-            }
-
-            else if (cmdName === 'kill' && args[1] !== undefined) {
-                const pid = parseInt(args[1]);
-                if (OS.openWindows && OS.openWindows[pid]) {
-                    OS.openWindows[pid].winElement.remove();
-                    OS.openWindows.splice(pid, 1);
-                    OS.renderTaskbar();
-                    print(`<span class="success">Process ${pid} terminated.</span>`);
-                } else {
-                    print(`<span class="error">Invalid PID.</span>`);
-                }
-            }
-
-            else if (cmdName === 'theme' && args[1]) {
-                const color = args[1].startsWith('#') ? args[1] : '#' + args[1];
-                document.documentElement.style.setProperty('--accent', color);
-                localStorage.setItem('os_theme', color);
-                OS.postMessage({ action: 'changeTheme', color }, '*');
-                print(`<span class="success">Theme changed to ${color}</span>`);
-            }
-
-            else if (cmdName === 'notify') {
-                const msg = command.substring(7).trim();
-                if (msg) {
-                    OS.showNotification('Terminal', msg);
-                    print(`<span class="success">Notification sent.</span>`);
-                } else {
-                    print(`<span class="error">Usage: notify [message]</span>`);
-                }
-            }
-
-            // ===== ADMIN COMMANDS =====
-            else if (cmdName === 'sudo') {
-                if (!isAdmin()) {
-                    print(`<span class="error">Permission denied. This incident will be reported.</span>`);
-                    return;
-                }
-
-                const action = args[1];
-                
-                if (action === 'token') {
-                    sessionToken = await OS.osPrompt("GitHub PAT", "Enter your Personal Access Token:");
-                    if (sessionToken) {
-                        print(`<span class="success">Token set for this session.</span>`);
-                    }
-                }
-
-                else if (action === 'pull' && args[2]) {
-                    await pullFromGitHub(args[2]);
-                }
-
-                else if (action === 'push' && args[2]) {
-                    const repoPath = args[3] || args[2];
-                    await pushToGitHub(args[2], repoPath);
-                }
-
-                else if (action === 'nuke') {
-                    const confirmed = await OS.osConfirm('DANGER', 'Delete ALL VFS files? This cannot be undone!');
-                    if (confirmed) {
-                        const files = await VFS.getFiles();
-                        for (const f of files) {
-                            await VFS.deleteFile(f.name);
-                        }
-                        print(`<span class="warning">VFS wiped clean.</span>`);
-                    }
-                }
-
-                else if (action === 'inject' && args[2]) {
-                    try {
-                        const code = command.substring(command.indexOf('inject') + 7);
-                        const result = eval(code);
-                        if (result !== undefined) print(`  ${result}`);
-                        print(`<span class="success">Code executed.</span>`);
-                    } catch (err) {
-                        print(`<span class="error">Execution error: ${err.message}</span>`);
-                    }
-                }
-
-                else {
-                    print(`<span class="error">Unknown sudo command. Try 'help'.</span>`);
-                }
-            }
-
-            else {
-                print(`<span class="error">'${cmdName}' is not recognized as an internal command.</span>`);
-            }
+        function setStatus(text, type) {
+            const el = document.getElementById('status-text');
+            el.innerText = text;
+            el.className = 'terminal-status ' + type;
         }
 
-        // ===== HELPER FUNCTIONS =====
-        function isAdmin() {
-            const user = (OS.currentUser || '').toLowerCase();
-            const admins = (OS.ADMINS || []).map(a => a.toLowerCase());
-            return admins.includes(user);
+        function showError(msg) {
+            document.getElementById('loading-screen').style.display = 'none';
+            const err = document.getElementById('error-screen');
+            err.classList.add('visible');
+            document.getElementById('error-msg').innerText = msg;
+            setStatus('Error', '');
         }
 
-        function buildTree(files) {
-            const tree = {};
-            files.forEach(f => {
-                const parts = f.name.split('/');
-                let current = tree;
-                parts.forEach((part, i) => {
-                    if (!current[part]) {
-                        current[part] = i === parts.length - 1 ? null : {};
-                    }
-                    current = current[part] || current;
-                });
+        function showTerminal() {
+            document.getElementById('loading-screen').style.display = 'none';
+            const container = document.getElementById('terminal-container');
+            container.classList.add('visible');
+            setStatus('Ready', 'ready');
+            isReady = true;
+            if (fitAddon) fitAddon.fit();
+        }
+
+        function initTerminal() {
+            const container = document.getElementById('terminal-container');
+
+            term = new Terminal({
+                cursorBlink: true,
+                cursorStyle: 'block',
+                fontSize: 14,
+                fontFamily: "'Cascadia Code', 'Courier New', monospace",
+                theme: {
+                    background: '#0d0d0d',
+                    foreground: '#f0f0f0',
+                    cursor: '#ff2e2e',
+                    cursorAccent: '#0d0d0d',
+                    selection: 'rgba(255, 46, 46, 0.3)',
+                    black: '#0d0d0d',
+                    red: '#ff2e2e',
+                    green: '#00ff88',
+                    yellow: '#ffaa00',
+                    blue: '#0078D4',
+                    magenta: '#cc44ff',
+                    cyan: '#00ccff',
+                    white: '#f0f0f0',
+                    brightBlack: '#444444',
+                    brightRed: '#ff6666',
+                    brightGreen: '#66ffaa',
+                    brightYellow: '#ffcc44',
+                    brightBlue: '#4499ff',
+                    brightMagenta: '#dd88ff',
+                    brightCyan: '#44ddff',
+                    brightWhite: '#ffffff',
+                },
+                allowTransparency: true,
+                scrollback: 1000,
             });
-            return tree;
-        }
 
-        function renderTree(node, prefix) {
-            Object.keys(node).forEach((key, i, arr) => {
-                const isLast = i === arr.length - 1;
-                const branch = isLast ? '└── ' : '├── ';
-                const isFolder = node[key] !== null;
-                print(`${prefix}${branch}${isFolder ? '<span class="info">' + key + '</span>' : key}`);
-                if (isFolder) {
-                    renderTree(node[key], prefix + (isLast ? '    ' : '│   '));
-                }
+            fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            term.open(container);
+            fitAddon.fit();
+
+            window.addEventListener('resize', () => {
+                if (fitAddon) fitAddon.fit();
             });
+
+            return term;
         }
 
-        // ===== GITHUB OPERATIONS (WITH SAFE ENCODING) =====
-async function pullFromGitHub(repoPath) {
-    const owner = 'Dragon-Gaming-Platforms';
-    const repo = 'Web-Operating-System';
-
-    print(`<span class="info">Fetching ${repoPath} from GitHub...</span>`);
-
-    try {
-        // Try without auth first (works for public repos)
-        let headers = { 'Accept': 'application/vnd.github.v3+json' };
-        
-        let res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${repoPath}`, { headers });
-
-        // If unauthorized and we don't have a token, ask for it
-        if (!res.ok && res.status === 404) {
-            if (!sessionToken) {
-                sessionToken = await OS.osPrompt("GitHub PAT", "This repo may be private. Enter your Personal Access Token:");
-                if (!sessionToken) {
-                    print(`<span class="warning">Pull aborted.</span>`);
-                    return;
-                }
-            }
-            
-            // Retry with auth
-            headers['Authorization'] = `Bearer ${sessionToken}`;
-            res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${repoPath}`, { headers });
-        }
-
-        if (!res.ok) throw new Error('File not found in repository.');
-
-        const data = await res.json();
-        if (data.type !== 'file') throw new Error('Target is not a file.');
-
-        const content = safeBase64Decode(data.content);
-
-        const localName = repoPath.split('/').pop();
-        const path = currentPath === '' ? localName : `${currentPath}/${localName}`;
-
-        const ext = localName.split('.').pop().toLowerCase();
-        const mimeTypes = { html: 'text/html', js: 'text/javascript', css: 'text/css', json: 'application/json' };
-        const mime = mimeTypes[ext] || 'text/plain';
-
-        await VFS.saveFile(path, mime, content);
-        print(`<span class="success">✓ ${localName} pulled from GitHub.</span>`);
-        OS.showNotification('File Imported', `${localName} saved to VFS`);
-    } catch (err) {
-        print(`<span class="error">Pull Error: ${err.message}</span>`);
-    }
-}
-
-        async function pushToGitHub(localFile, repoPath) {
-            if (!sessionToken) {
-                sessionToken = await OS.osPrompt("GitHub PAT", "Enter your Personal Access Token:");
-            }
-            if (!sessionToken) {
-                print(`<span class="warning">Push aborted.</span>`);
-                return;
-            }
-
-            const files = await VFS.getFiles();
-            const targetPath = currentPath === '' ? localFile : `${currentPath}/${localFile}`;
-            const file = files.find(f => f.name === targetPath && f.type !== 'folder');
-
-            if (!file) {
-                print(`<span class="error">Error: '${targetPath}' not found locally.</span>`);
-                return;
-            }
-
-            const commitMsg = await OS.osPrompt("Commit Message", "Enter commit message:", `Update ${repoPath} via Terminal`);
-            if (!commitMsg) {
-                print(`<span class="warning">Push aborted.</span>`);
-                return;
-            }
-
-            const owner = 'Dragon-Gaming-Platforms';
-            const repo = 'Web-Operating-System';
-
-            print(`<span class="info">Pushing ${localFile} to GitHub...</span>`);
-
+        async function startWebVM() {
             try {
-                let fileSha = null;
-                const checkRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${repoPath}`, {
-                    headers: { 'Authorization': `Bearer ${sessionToken}` }
+                advanceLoadingStep();
+                setStatus('Loading CheerpX...', 'loading');
+
+                initTerminal();
+
+                advanceLoadingStep();
+                setStatus('Loading filesystem...', 'loading');
+
+                // Find the latest ext2 image
+                const imageUrl = await findLatestImage();
+
+                cx = await CheerpX.Linux.create({
+                    mounts: [
+                        { type: "ext2", url: imageUrl, mountpoint: "/" },
+                        { type: "devs", mountpoint: "/dev" },
+                        { type: "proc", mountpoint: "/proc" },
+                        { type: "dir", mountpoint: "/tmp" }
+                    ],
+                    networkInterface: null,
                 });
 
-                if (checkRes.ok) {
-                    const checkData = await checkRes.json();
-                    fileSha = checkData.sha;
-                }
+                advanceLoadingStep();
+                setStatus('Starting Linux...', 'loading');
 
-                // ✅ SAFE ENCODING
-                const base64Content = safeBase64Encode(file.content);
+                cx.setConsole(term);
 
-                const bodyData = { message: commitMsg, content: base64Content };
-                if (fileSha) bodyData.sha = fileSha;
+                advanceLoadingStep();
+                setStatus('Launching bash...', 'loading');
 
-                const pushRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${repoPath}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${sessionToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(bodyData)
+                showTerminal();
+
+                await cx.run("/bin/bash", ["--login"], {
+                    env: [
+                        "HOME=/home/user",
+                        "TERM=xterm",
+                        "USER=user",
+                        "SHELL=/bin/bash",
+                        "EDITOR=vim",
+                        "LANG=en_US.UTF-8",
+                        "LC_ALL=C",
+                        "PATH=/home/user/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                    ],
+                    cwd: "/home/user",
+                    uid: 1000,
+                    gid: 1000,
                 });
 
-                if (pushRes.ok) {
-                    print(`<span class="success">✓ Commit pushed to GitHub repository.</span>`);
-                    OS.showNotification('File Pushed', `${repoPath} committed successfully`);
-                    setTimeout(() => OS.checkForGitHubUpdates && OS.checkForGitHubUpdates(), 2000);
-                } else {
-                    const errData = await pushRes.json();
-                    print(`<span class="error">GitHub API Error: ${errData.message}</span>`);
-                    if (pushRes.status === 401) sessionToken = '';
-                }
             } catch (err) {
-                print(`<span class="error">Network Error: ${err.message}</span>`);
+                console.error("WebVM Error:", err);
+                showError("Failed to start terminal:\n" + err.message);
             }
         }
+
+        async function findLatestImage() {
+            // Try to find the ext2 image
+            const possibleNames = [
+                '/debian_mini_LATEST.ext2',
+                // Add the actual filename after first deploy
+            ];
+
+            for (const name of possibleNames) {
+                try {
+                    const response = await fetch(name, { method: 'HEAD' });
+                    if (response.ok) return name;
+                } catch (e) {
+                    continue;
+                }
+            }
+
+            // If none found, throw error with helpful message
+            throw new Error(
+                "Could not find WebVM image. " +
+                "Make sure the WebVM workflow has run successfully."
+            );
+        }
+
+        function clearTerminal() {
+            if (term) term.clear();
+        }
+
+        function restartTerminal() {
+            document.getElementById('error-screen').classList.remove('visible');
+            document.getElementById('terminal-container').classList.remove('visible');
+            document.getElementById('loading-screen').style.display = 'flex';
+
+            currentStep = 0;
+            logSteps.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.remove('active');
+                    el.style.color = '';
+                }
+            });
+
+            isReady = false;
+            cx = null;
+
+            setTimeout(startWebVM, 500);
+        }
+
+        window.addEventListener('load', () => {
+            startWebVM();
+        });
     </script>
 </body>
 </html>
