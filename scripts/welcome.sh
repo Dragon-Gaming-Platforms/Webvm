@@ -1,8 +1,5 @@
 #!/bin/bash
 echo "==============================="
-echo "Dragon Gaming Platforms-Web Operating System!"
-echo "==============================="
-echo ""
 echo "Commands:"
 echo "  install username/repo"
 echo "  - Installs and runs from GitHub"
